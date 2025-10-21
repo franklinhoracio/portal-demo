@@ -17416,56 +17416,74 @@ var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
 var _s = $RefreshSig$();
 /**
- * React puro, desde cero. Sin Tailwind, sin frameworks, sin plantillas literales en estilos.
- * Layout centrado, tabs claros, ancho uniforme en todas las vistas.
+ * React puro, misma línea gráfica.
+ * Agrega loader en visor OHIF y PDF mientras cargan.
  */ // ==============================
-// Configuración demo
+// Configuración demo (OHIF + PDF + DICOM ZIP)
 // ==============================
-const DEMO_STUDY_ID = "d7f1d140-a8915e21-18c599e6-2e9a9bed-dbc01840";
-const OSIMIS_VIEWER_BASE = "http://168.243.238.18:8043/osimis-viewer/app/index.html";
-const ORTHANC_API_BASE = "http://168.243.238.18:8042/orthanc";
-const osimisUrlFor = (studyId)=>OSIMIS_VIEWER_BASE + "?study=" + studyId;
-const dicomZipUrlFor = (studyId)=>ORTHANC_API_BASE + "/studies/" + studyId + "/archive";
-//const DEMO_REPORT_PDF = "/reporteDemoBenjamin.pdf";
-const DEMO_REPORT_PDF = new URL(require("e7020515e94229f0")).href;
+const OHIF_COL_URL = "http://168.243.238.18:5172/ohif/viewer?StudyInstanceUIDs=1.2.840.113845.11.1000000002170592405.20230717110051.1083500";
+const OHIF_TOB_URL = "http://168.243.238.18:5172/ohif/viewer?StudyInstanceUIDs=1.2.840.113845.11.1000000002170592405.20240528131335.1103415";
+// ZIPs
+const ZIP_TOB = "http://168.243.238.18:5172/studies/2c7360f5-e07fb5d4-5e861576-3e2ab070-11bdf345/archive?filename=00253107-3-ALDANA%20RIVAS%5ELUIS%20BENJAMIN-20240528-Rx%20TOBILLO%20DERECHO.zip";
+const ZIP_COL = "http://168.243.238.18:5172/studies/d7f1d140-a8915e21-18c599e6-2e9a9bed-dbc01840/archive?filename=00253107-3-ALDANA%20RIVAS%5ELUIS%20BENJAMIN-20230717-Rx%20COLUMNA%20LUMBOSACRA.zip";
+// PDF en src/assets/reportDemo.pdf
+const REPORT_URL = new URL(require("15998c8a7eb4e1e9")).href;
+// ==============================
+// Datos mock mínimos
+// ==============================
 const mockPatient = {
-    id: "BENJAMIN-DEMO",
-    name: "Paciente DEMO (Benjamin)",
+    id: "DEMO",
+    name: "Paciente DEMO",
     dob: "1990-01-01",
     age: 34,
     sex: "Masculino"
 };
-const benjaminStudy = {
-    id: DEMO_STUDY_ID,
-    modality: "CR",
-    title: "Columna Lumbosacra",
-    date: "2025-09-03",
-    description: "Estudio CR Columna Lumbosacra (demo Benjamin).",
-    radiologist: "Medico Radiologo",
-    preview: osimisUrlFor(DEMO_STUDY_ID),
-    dicomZip: dicomZipUrlFor(DEMO_STUDY_ID),
-    reportPdf: DEMO_REPORT_PDF
-};
 const mockStudies = [
     {
-        ...benjaminStudy,
-        id: DEMO_STUDY_ID + "-1"
+        id: "study-columna",
+        modality: "CR",
+        title: "Columna",
+        date: "2025-09-03",
+        description: "Estudio de columna para demostraci\xf3n.",
+        radiologist: "M\xe9dico Radi\xf3logo",
+        preview: OHIF_COL_URL,
+        dicomZip: ZIP_COL,
+        reportPdf: REPORT_URL
     },
     {
-        ...benjaminStudy,
-        id: DEMO_STUDY_ID + "-2"
-    },
-    {
-        ...benjaminStudy,
-        id: DEMO_STUDY_ID + "-3"
+        id: "study-tobillo-derecho",
+        modality: "CR",
+        title: "Tobillo derecho",
+        date: "2025-09-04",
+        description: "Estudio de tobillo derecho para demostraci\xf3n.",
+        radiologist: "M\xe9dico Radi\xf3logo",
+        preview: OHIF_TOB_URL,
+        dicomZip: ZIP_TOB,
+        reportPdf: REPORT_URL
     }
 ];
 function PortalResultadosReactSolo() {
     _s();
-    const [activeTab, setActiveTab] = (0, _react.useState)("historial");
+    const [activeTab, setActiveTab] = (0, _react.useState)("historial"); // 'historial' | 'imagenes' | 'reporte'
     const [selectedStudyId, setSelectedStudyId] = (0, _react.useState)(mockStudies[0].id);
     const selectedStudy = (0, _react.useMemo)(()=>mockStudies.find((s)=>s.id === selectedStudyId) || mockStudies[0], [
         selectedStudyId
+    ]);
+    // Loaders
+    const [viewerLoading, setViewerLoading] = (0, _react.useState)(false);
+    const [pdfLoading, setPdfLoading] = (0, _react.useState)(false);
+    // Cuando cambias de estudio o entras a "Imágenes", se muestra loader
+    (0, _react.useEffect)(()=>{
+        if (activeTab === "imagenes") setViewerLoading(true);
+    }, [
+        activeTab,
+        selectedStudyId
+    ]);
+    // Cuando entras a "Reporte", loader del PDF
+    (0, _react.useEffect)(()=>{
+        if (activeTab === "reporte") setPdfLoading(true);
+    }, [
+        activeTab
     ]);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         className: "pr-root",
@@ -17473,13 +17491,13 @@ function PortalResultadosReactSolo() {
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("style", {
                 children: `
         .pr-root {
-  --bg:#FFFFFF;
-  --text:#1F2937;
-  --border:#E5E7EB;
-  --brand:#0A66FF;
-  color-scheme: light;
-  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-}
+          --bg:#FFFFFF;
+          --text:#1F2937;
+          --border:#E5E7EB;
+          --brand:#0A66FF;
+          color-scheme: light;
+          font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
         .pr-root, .pr-root *{ box-sizing: border-box; }
         .pr-page{ background: var(--bg); color: var(--text); min-height: 100vh; }
         .pr-container{ max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
@@ -17511,15 +17529,32 @@ function PortalResultadosReactSolo() {
         .pr-btn:focus{ outline:2px solid var(--brand); outline-offset:2px; }
         .pr-btn--primary{ background: var(--brand); color:#FFFFFF; border-color: var(--brand); }
 
-        .pr-embed{ background:#FFFFFF; border:1px solid var(--border); border-radius:.75rem; overflow:hidden; }
-        .pr-embed--img{ height:72vh; }
+        .pr-embed{ background:#FFFFFF; border:1px solid var(--border); border-radius:.75rem; overflow:hidden; position:relative; }
+        .pr-embed--img{ height:80vh; }
         .pr-embed--pdf{ height:80vh; }
 
+        /* Loader overlay */
+        .pr-loader{
+          position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          background: #FFFFFF;
+        }
+        .pr-loader__box{
+          display:flex; flex-direction:column; align-items:center; gap:.75rem;
+          padding:1rem 1.25rem; border:1px solid var(--border); border-radius:.75rem; background:#fff;
+        }
+        .pr-spinner{
+          width:28px; height:28px; border:3px solid #E5E7EB; border-top-color: var(--brand);
+          border-radius:50%; animation: prspin 0.9s linear infinite;
+        }
+        @keyframes prspin { to { transform: rotate(360deg); } }
+        .pr-loader__text{ font-weight:600; font-size:.95rem; color: var(--text); }
+        .pr-loader__sub{ font-size:.8rem; color:#6B7280; }
+        
         .pr-foot{ text-align:center; font-size:.75rem; padding-top:.75rem; }
       `
             }, void 0, false, {
                 fileName: "src/PortalResultadosReactSolo.jsx",
-                lineNumber: 58,
+                lineNumber: 85,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17535,21 +17570,21 @@ function PortalResultadosReactSolo() {
                                     children: "Demo Portal de Pacientes"
                                 }, void 0, false, {
                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                    lineNumber: 108,
+                                    lineNumber: 152,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                     className: "pr-sub",
-                                    children: "Resultados de estudios \u2022 Visor Osimis/Orthanc"
+                                    children: "Resultados de estudios \u2022 Visor OHIF"
                                 }, void 0, false, {
                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                    lineNumber: 109,
+                                    lineNumber: 153,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/PortalResultadosReactSolo.jsx",
-                            lineNumber: 107,
+                            lineNumber: 151,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17568,7 +17603,7 @@ function PortalResultadosReactSolo() {
                                             children: "Historial"
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 114,
+                                            lineNumber: 158,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -17578,7 +17613,7 @@ function PortalResultadosReactSolo() {
                                             children: "Im\xe1genes"
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 115,
+                                            lineNumber: 159,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -17588,13 +17623,13 @@ function PortalResultadosReactSolo() {
                                             children: "Reporte"
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 116,
+                                            lineNumber: 160,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                    lineNumber: 113,
+                                    lineNumber: 157,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17623,7 +17658,7 @@ function PortalResultadosReactSolo() {
                                                                                         children: s.modality
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                        lineNumber: 129,
+                                                                                        lineNumber: 177,
                                                                                         columnNumber: 31
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17631,13 +17666,13 @@ function PortalResultadosReactSolo() {
                                                                                         children: s.title
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                        lineNumber: 130,
+                                                                                        lineNumber: 178,
                                                                                         columnNumber: 31
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 128,
+                                                                                lineNumber: 176,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17645,13 +17680,13 @@ function PortalResultadosReactSolo() {
                                                                                 children: new Date(s.date).toLocaleDateString()
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 132,
+                                                                                lineNumber: 180,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 127,
+                                                                        lineNumber: 175,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17662,7 +17697,7 @@ function PortalResultadosReactSolo() {
                                                                         children: s.description
                                                                     }, void 0, false, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 134,
+                                                                        lineNumber: 182,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17676,18 +17711,18 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 135,
+                                                                        lineNumber: 183,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, s.id, true, {
                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                lineNumber: 126,
+                                                                lineNumber: 170,
                                                                 columnNumber: 25
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                        lineNumber: 124,
+                                                        lineNumber: 168,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17705,7 +17740,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Estudio seleccionado"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 143,
+                                                                                lineNumber: 191,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17716,13 +17751,13 @@ function PortalResultadosReactSolo() {
                                                                                 children: selectedStudy.title
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 144,
+                                                                                lineNumber: 192,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 142,
+                                                                        lineNumber: 190,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17733,10 +17768,10 @@ function PortalResultadosReactSolo() {
                                                                                 href: selectedStudy.preview,
                                                                                 target: "_blank",
                                                                                 rel: "noreferrer",
-                                                                                children: "Abrir visor (Osimis)"
+                                                                                children: "Abrir visor (OHIF)"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 147,
+                                                                                lineNumber: 195,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("a", {
@@ -17747,7 +17782,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Descargar DICOM"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 148,
+                                                                                lineNumber: 198,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -17756,7 +17791,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Ver im\xe1genes"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 149,
+                                                                                lineNumber: 201,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -17765,19 +17800,19 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Ver reporte"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 150,
+                                                                                lineNumber: 202,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 146,
+                                                                        lineNumber: 194,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                lineNumber: 141,
+                                                                lineNumber: 189,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17795,7 +17830,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Paciente:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 155,
+                                                                                lineNumber: 207,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17803,7 +17838,7 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 155,
+                                                                        lineNumber: 207,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17812,7 +17847,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Fecha:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 156,
+                                                                                lineNumber: 208,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17820,7 +17855,7 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 156,
+                                                                        lineNumber: 208,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17829,7 +17864,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Modalidad:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 157,
+                                                                                lineNumber: 209,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17837,7 +17872,7 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 157,
+                                                                        lineNumber: 209,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17846,7 +17881,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Estudio:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 158,
+                                                                                lineNumber: 210,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17854,7 +17889,7 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 158,
+                                                                        lineNumber: 210,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17863,7 +17898,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Radi\xf3logo:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 159,
+                                                                                lineNumber: 211,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17871,7 +17906,7 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 159,
+                                                                        lineNumber: 211,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17880,7 +17915,7 @@ function PortalResultadosReactSolo() {
                                                                                 children: "Descripci\xf3n:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                                lineNumber: 160,
+                                                                                lineNumber: 212,
                                                                                 columnNumber: 30
                                                                             }, this),
                                                                             " ",
@@ -17888,30 +17923,30 @@ function PortalResultadosReactSolo() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                        lineNumber: 160,
+                                                                        lineNumber: 212,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                lineNumber: 154,
+                                                                lineNumber: 206,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/PortalResultadosReactSolo.jsx",
-                                                        lineNumber: 140,
+                                                        lineNumber: 188,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                lineNumber: 123,
+                                                lineNumber: 167,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 122,
+                                            lineNumber: 166,
                                             columnNumber: 17
                                         }, this),
                                         activeTab === 'imagenes' && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17925,13 +17960,51 @@ function PortalResultadosReactSolo() {
                                                     maxWidth: 1000
                                                 },
                                                 children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    style: {
-                                                        border: '1px solid #E5E7EB',
-                                                        borderRadius: 12,
-                                                        overflow: 'hidden',
-                                                        background: '#FFFFFF'
-                                                    },
+                                                    className: "pr-embed pr-embed--img",
+                                                    role: "region",
+                                                    "aria-label": "Visor embebido",
                                                     children: [
+                                                        viewerLoading && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                            className: "pr-loader",
+                                                            "aria-live": "polite",
+                                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                className: "pr-loader__box",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                        className: "pr-spinner",
+                                                                        "aria-hidden": "true"
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                        lineNumber: 227,
+                                                                        columnNumber: 29
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                        className: "pr-loader__text",
+                                                                        children: "Cargando visor..."
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                        lineNumber: 228,
+                                                                        columnNumber: 29
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                        className: "pr-loader__sub",
+                                                                        children: "Esto puede tomar unos segundos"
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                        lineNumber: 229,
+                                                                        columnNumber: 29
+                                                                    }, this)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                lineNumber: 226,
+                                                                columnNumber: 27
+                                                            }, this)
+                                                        }, void 0, false, {
+                                                            fileName: "src/PortalResultadosReactSolo.jsx",
+                                                            lineNumber: 225,
+                                                            columnNumber: 25
+                                                        }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                             style: {
                                                                 display: 'flex',
@@ -17939,7 +18012,13 @@ function PortalResultadosReactSolo() {
                                                                 justifyContent: 'space-between',
                                                                 gap: 12,
                                                                 padding: '12px 16px',
-                                                                borderBottom: '1px solid #E5E7EB'
+                                                                borderBottom: '1px solid #E5E7EB',
+                                                                background: '#fff',
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                zIndex: 1
                                                             },
                                                             children: [
                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -17950,8 +18029,8 @@ function PortalResultadosReactSolo() {
                                                                     children: "Visor embebido"
                                                                 }, void 0, false, {
                                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                    lineNumber: 187,
-                                                                    columnNumber: 11
+                                                                    lineNumber: 234,
+                                                                    columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                                     style: {
@@ -17974,8 +18053,8 @@ function PortalResultadosReactSolo() {
                                                                             children: "Abrir en pesta\xf1a nueva"
                                                                         }, void 0, false, {
                                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                            lineNumber: 189,
-                                                                            columnNumber: 13
+                                                                            lineNumber: 236,
+                                                                            columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("a", {
                                                                             href: selectedStudy.dicomZip,
@@ -17992,51 +18071,60 @@ function PortalResultadosReactSolo() {
                                                                             children: "Descargar DICOM"
                                                                         }, void 0, false, {
                                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                            lineNumber: 193,
-                                                                            columnNumber: 13
+                                                                            lineNumber: 244,
+                                                                            columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                    lineNumber: 188,
-                                                                    columnNumber: 11
+                                                                    lineNumber: 235,
+                                                                    columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                            lineNumber: 179,
-                                                            columnNumber: 9
+                                                            lineNumber: 233,
+                                                            columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("iframe", {
-                                                            title: "Visor Osimis",
+                                                            title: "Visor OHIF",
                                                             src: selectedStudy.preview,
                                                             style: {
-                                                                display: 'block',
+                                                                position: 'absolute',
+                                                                top: 49,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
                                                                 width: '100%',
-                                                                height: '80vh',
+                                                                height: 'calc(100% - 49px)',
                                                                 border: 0
                                                             },
-                                                            allowFullScreen: true
+                                                            allowFullScreen: true,
+                                                            onLoad: ()=>{
+                                                                // OHIF pinta negro un rato después de cargar el HTML base.
+                                                                // Espera un poco antes de ocultar el loader.
+                                                                setTimeout(()=>setViewerLoading(false), 10000);
+                                                            }
                                                         }, void 0, false, {
                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                            lineNumber: 201,
-                                                            columnNumber: 9
+                                                            lineNumber: 256,
+                                                            columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                    lineNumber: 172,
-                                                    columnNumber: 7
+                                                    lineNumber: 223,
+                                                    columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                lineNumber: 170,
-                                                columnNumber: 5
+                                                lineNumber: 222,
+                                                columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 169,
-                                            columnNumber: 3
+                                            lineNumber: 221,
+                                            columnNumber: 17
                                         }, this),
                                         activeTab === 'reporte' && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             style: {
@@ -18049,13 +18137,43 @@ function PortalResultadosReactSolo() {
                                                     maxWidth: 1000
                                                 },
                                                 children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    style: {
-                                                        border: '1px solid #E5E7EB',
-                                                        borderRadius: 12,
-                                                        overflow: 'hidden',
-                                                        background: '#FFFFFF'
-                                                    },
+                                                    className: "pr-embed pr-embed--pdf",
+                                                    role: "region",
+                                                    "aria-label": "Reporte PDF",
                                                     children: [
+                                                        pdfLoading && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                            className: "pr-loader",
+                                                            "aria-live": "polite",
+                                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                className: "pr-loader__box",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                        className: "pr-spinner",
+                                                                        "aria-hidden": "true"
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                        lineNumber: 280,
+                                                                        columnNumber: 29
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                        className: "pr-loader__text",
+                                                                        children: "Cargando reporte..."
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                        lineNumber: 281,
+                                                                        columnNumber: 29
+                                                                    }, this)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "src/PortalResultadosReactSolo.jsx",
+                                                                lineNumber: 279,
+                                                                columnNumber: 27
+                                                            }, this)
+                                                        }, void 0, false, {
+                                                            fileName: "src/PortalResultadosReactSolo.jsx",
+                                                            lineNumber: 278,
+                                                            columnNumber: 25
+                                                        }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                             style: {
                                                                 display: 'flex',
@@ -18063,7 +18181,13 @@ function PortalResultadosReactSolo() {
                                                                 justifyContent: 'space-between',
                                                                 gap: 12,
                                                                 padding: '12px 16px',
-                                                                borderBottom: '1px solid #E5E7EB'
+                                                                borderBottom: '1px solid #E5E7EB',
+                                                                background: '#fff',
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                zIndex: 1
                                                             },
                                                             children: [
                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -18074,8 +18198,8 @@ function PortalResultadosReactSolo() {
                                                                     children: "Reporte PDF"
                                                                 }, void 0, false, {
                                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                    lineNumber: 233,
-                                                                    columnNumber: 11
+                                                                    lineNumber: 286,
+                                                                    columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("a", {
                                                                     href: selectedStudy.reportPdf,
@@ -18092,55 +18216,60 @@ function PortalResultadosReactSolo() {
                                                                     children: "Descargar PDF"
                                                                 }, void 0, false, {
                                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                                    lineNumber: 234,
-                                                                    columnNumber: 11
+                                                                    lineNumber: 287,
+                                                                    columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                            lineNumber: 225,
-                                                            columnNumber: 9
+                                                            lineNumber: 285,
+                                                            columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("embed", {
                                                             src: selectedStudy.reportPdf + '#view=FitH',
                                                             type: "application/pdf",
+                                                            onLoad: ()=>setPdfLoading(false),
                                                             style: {
-                                                                display: 'block',
+                                                                position: 'absolute',
+                                                                top: 49,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
                                                                 width: '100%',
-                                                                height: '80vh',
+                                                                height: 'calc(100% - 49px)',
                                                                 border: 0
                                                             }
                                                         }, void 0, false, {
                                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                                            lineNumber: 241,
-                                                            columnNumber: 9
+                                                            lineNumber: 297,
+                                                            columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                                    lineNumber: 219,
-                                                    columnNumber: 7
+                                                    lineNumber: 276,
+                                                    columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "src/PortalResultadosReactSolo.jsx",
-                                                lineNumber: 218,
-                                                columnNumber: 5
+                                                lineNumber: 275,
+                                                columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "src/PortalResultadosReactSolo.jsx",
-                                            lineNumber: 217,
-                                            columnNumber: 3
+                                            lineNumber: 274,
+                                            columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/PortalResultadosReactSolo.jsx",
-                                    lineNumber: 119,
+                                    lineNumber: 163,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/PortalResultadosReactSolo.jsx",
-                            lineNumber: 112,
+                            lineNumber: 156,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -18148,28 +18277,28 @@ function PortalResultadosReactSolo() {
                             children: "Demo Portal de Pacientes INTECH."
                         }, void 0, false, {
                             fileName: "src/PortalResultadosReactSolo.jsx",
-                            lineNumber: 258,
+                            lineNumber: 310,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/PortalResultadosReactSolo.jsx",
-                    lineNumber: 106,
+                    lineNumber: 150,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "src/PortalResultadosReactSolo.jsx",
-                lineNumber: 105,
+                lineNumber: 149,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/PortalResultadosReactSolo.jsx",
-        lineNumber: 56,
+        lineNumber: 84,
         columnNumber: 5
     }, this);
 }
-_s(PortalResultadosReactSolo, "UbwF0/tUAcT6/hyQMWmrELWYDFM=");
+_s(PortalResultadosReactSolo, "Xgi7YqKeREHVlehORawpX1dFECM=");
 _c = PortalResultadosReactSolo;
 var _c;
 $RefreshReg$(_c, "PortalResultadosReactSolo");
@@ -18179,7 +18308,7 @@ $RefreshReg$(_c, "PortalResultadosReactSolo");
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi","e7020515e94229f0":"kZN5a"}],"jnFvT":[function(require,module,exports,__globalThis) {
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi","15998c8a7eb4e1e9":"iB9Os"}],"jnFvT":[function(require,module,exports,__globalThis) {
 exports.interopDefault = function(a) {
     return a && a.__esModule ? a : {
         default: a
@@ -20487,8 +20616,8 @@ function $da9882e673ac146b$var$ErrorOverlay() {
     return null;
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"kZN5a":[function(require,module,exports,__globalThis) {
-module.exports = module.bundle.resolve("reporteDemoBenjamin.f0789137.pdf") + "?" + Date.now();
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"iB9Os":[function(require,module,exports,__globalThis) {
+module.exports = module.bundle.resolve("reportDemo.fa489d69.pdf") + "?" + Date.now();
 
 },{}]},["7jy38","a0t4e"], "a0t4e", "parcelRequire5a03", {}, "./", "/", "http://localhost:5173")
 

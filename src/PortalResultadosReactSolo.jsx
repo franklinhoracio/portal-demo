@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 /**
  * React puro, misma línea gráfica.
- * Se agregan las URLs de descarga DICOM por estudio y se mantienen estilos.
+ * Agrega loader en visor OHIF y PDF mientras cargan.
  */
 
 // ==============================
@@ -13,7 +13,7 @@ const OHIF_COL_URL =
 const OHIF_TOB_URL =
   "http://168.243.238.18:5172/ohif/viewer?StudyInstanceUIDs=1.2.840.113845.11.1000000002170592405.20240528131335.1103415";
 
-// ZIPs (corregidos según el filename real)
+// ZIPs
 const ZIP_TOB =
   "http://168.243.238.18:5172/studies/2c7360f5-e07fb5d4-5e861576-3e2ab070-11bdf345/archive?filename=00253107-3-ALDANA%20RIVAS%5ELUIS%20BENJAMIN-20240528-Rx%20TOBILLO%20DERECHO.zip";
 const ZIP_COL =
@@ -41,9 +41,9 @@ const mockStudies = [
     date: "2025-09-03",
     description: "Estudio de columna para demostración.",
     radiologist: "Médico Radiólogo",
-    preview: OHIF_COL_URL,   // OHIF
-    dicomZip: ZIP_COL,       // ZIP correcto (Columna)
-    reportPdf: REPORT_URL,   // PDF demo
+    preview: OHIF_COL_URL,
+    dicomZip: ZIP_COL,
+    reportPdf: REPORT_URL,
   },
   {
     id: "study-tobillo-derecho",
@@ -52,32 +52,45 @@ const mockStudies = [
     date: "2025-09-04",
     description: "Estudio de tobillo derecho para demostración.",
     radiologist: "Médico Radiólogo",
-    preview: OHIF_TOB_URL,   // OHIF
-    dicomZip: ZIP_TOB,       // ZIP correcto (Tobillo)
-    reportPdf: REPORT_URL,   // PDF demo
+    preview: OHIF_TOB_URL,
+    dicomZip: ZIP_TOB,
+    reportPdf: REPORT_URL,
   },
 ];
 
 export default function PortalResultadosReactSolo() {
-  const [activeTab, setActiveTab] = useState("historial");
+  const [activeTab, setActiveTab] = useState("historial"); // 'historial' | 'imagenes' | 'reporte'
   const [selectedStudyId, setSelectedStudyId] = useState(mockStudies[0].id);
   const selectedStudy = useMemo(
     () => mockStudies.find((s) => s.id === selectedStudyId) || mockStudies[0],
     [selectedStudyId]
   );
 
+  // Loaders
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Cuando cambias de estudio o entras a "Imágenes", se muestra loader
+  useEffect(() => {
+    if (activeTab === "imagenes") setViewerLoading(true);
+  }, [activeTab, selectedStudyId]);
+
+  // Cuando entras a "Reporte", loader del PDF
+  useEffect(() => {
+    if (activeTab === "reporte") setPdfLoading(true);
+  }, [activeTab]);
+
   return (
     <div className="pr-root">
-      {/* Estilos SCOPED al componente */}
       <style>{`
         .pr-root {
-  --bg:#FFFFFF;
-  --text:#1F2937;
-  --border:#E5E7EB;
-  --brand:#0A66FF;
-  color-scheme: light;
-  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-}
+          --bg:#FFFFFF;
+          --text:#1F2937;
+          --border:#E5E7EB;
+          --brand:#0A66FF;
+          color-scheme: light;
+          font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
         .pr-root, .pr-root *{ box-sizing: border-box; }
         .pr-page{ background: var(--bg); color: var(--text); min-height: 100vh; }
         .pr-container{ max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
@@ -109,10 +122,27 @@ export default function PortalResultadosReactSolo() {
         .pr-btn:focus{ outline:2px solid var(--brand); outline-offset:2px; }
         .pr-btn--primary{ background: var(--brand); color:#FFFFFF; border-color: var(--brand); }
 
-        .pr-embed{ background:#FFFFFF; border:1px solid var(--border); border-radius:.75rem; overflow:hidden; }
-        .pr-embed--img{ height:72vh; }
+        .pr-embed{ background:#FFFFFF; border:1px solid var(--border); border-radius:.75rem; overflow:hidden; position:relative; }
+        .pr-embed--img{ height:80vh; }
         .pr-embed--pdf{ height:80vh; }
 
+        /* Loader overlay */
+        .pr-loader{
+          position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          background: #FFFFFF;
+        }
+        .pr-loader__box{
+          display:flex; flex-direction:column; align-items:center; gap:.75rem;
+          padding:1rem 1.25rem; border:1px solid var(--border); border-radius:.75rem; background:#fff;
+        }
+        .pr-spinner{
+          width:28px; height:28px; border:3px solid #E5E7EB; border-top-color: var(--brand);
+          border-radius:50%; animation: prspin 0.9s linear infinite;
+        }
+        @keyframes prspin { to { transform: rotate(360deg); } }
+        .pr-loader__text{ font-weight:600; font-size:.95rem; color: var(--text); }
+        .pr-loader__sub{ font-size:.8rem; color:#6B7280; }
+        
         .pr-foot{ text-align:center; font-size:.75rem; padding-top:.75rem; }
       `}</style>
 
@@ -186,21 +216,28 @@ export default function PortalResultadosReactSolo() {
                 </div>
               )}
 
-              {/* IMÁGENES */}
+              {/* IMÁGENES (con loader) */}
               {activeTab === 'imagenes' && (
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <div style={{ width: '100%', maxWidth: 1000 }}>
-                    {/* Caja del visor sin padding interno */}
-                    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
-                      {/* Barra superior */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
-                        <div style={{ fontWeight: 700, fontSize: 18 }}>Visor embebido</div>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="pr-embed pr-embed--img" role="region" aria-label="Visor embebido">
+                      {viewerLoading && (
+                        <div className="pr-loader" aria-live="polite">
+                          <div className="pr-loader__box">
+                            <div className="pr-spinner" aria-hidden="true"></div>
+                            <div className="pr-loader__text">Cargando visor...</div>
+                            <div className="pr-loader__sub">Esto puede tomar unos segundos</div>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'12px 16px', borderBottom:'1px solid #E5E7EB', background:'#fff', position:'absolute', top:0, left:0, right:0, zIndex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:18 }}>Visor embebido</div>
+                        <div style={{ display:'flex', gap:8 }}>
                           <a
                             href={selectedStudy.preview}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                            style={{ padding:'8px 12px', borderRadius:8, background:'#0A66FF', color:'#fff', textDecoration:'none', fontWeight:600 }}
                           >
                             Abrir en pestaña nueva
                           </a>
@@ -208,47 +245,60 @@ export default function PortalResultadosReactSolo() {
                             href={selectedStudy.dicomZip}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                            style={{ padding:'8px 12px', borderRadius:8, background:'#0A66FF', color:'#fff', textDecoration:'none', fontWeight:600 }}
                           >
                             Descargar DICOM
                           </a>
                         </div>
                       </div>
 
-                      {/* IFRAME A TODO ANCHO/ALTO */}
+                      {/* IFRAME ocupa todo (debajo de la barra) */}
                       <iframe
                         title="Visor OHIF"
                         src={selectedStudy.preview}
-                        style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
+                        style={{ position:'absolute', top:49, left:0, right:0, bottom:0, width:'100%', height:'calc(100% - 49px)', border:0 }}
                         allowFullScreen
+                        onLoad={() => {
+    // OHIF pinta negro un rato después de cargar el HTML base.
+    // Espera un poco antes de ocultar el loader.
+    setTimeout(() => setViewerLoading(false), 10000);
+  }}
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* REPORTE */}
+              {/* REPORTE (con loader) */}
               {activeTab === 'reporte' && (
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <div style={{ width: '100%', maxWidth: 1000 }}>
-                    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
-                        <div style={{ fontWeight: 700, fontSize: 18 }}>Reporte PDF</div>
+                    <div className="pr-embed pr-embed--pdf" role="region" aria-label="Reporte PDF">
+                      {pdfLoading && (
+                        <div className="pr-loader" aria-live="polite">
+                          <div className="pr-loader__box">
+                            <div className="pr-spinner" aria-hidden="true"></div>
+                            <div className="pr-loader__text">Cargando reporte...</div>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'12px 16px', borderBottom:'1px solid #E5E7EB', background:'#fff', position:'absolute', top:0, left:0, right:0, zIndex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:18 }}>Reporte PDF</div>
                         <a
                           href={selectedStudy.reportPdf}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                          style={{ padding:'8px 12px', borderRadius:8, background:'#0A66FF', color:'#fff', textDecoration:'none', fontWeight:600 }}
                         >
                           Descargar PDF
                         </a>
                       </div>
 
-                      {/* PDF A TODO ANCHO/ALTO */}
                       <embed
                         src={selectedStudy.reportPdf + '#view=FitH'}
                         type="application/pdf"
-                        style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
+                        onLoad={() => setPdfLoading(false)}
+                        style={{ position:'absolute', top:49, left:0, right:0, bottom:0, width:'100%', height:'calc(100% - 49px)', border:0 }}
                       />
                     </div>
                   </div>
