@@ -1,47 +1,61 @@
 import React, { useMemo, useState } from "react";
 
 /**
- * React puro, desde cero. Sin Tailwind, sin frameworks, sin plantillas literales en estilos.
- * Layout centrado, tabs claros, ancho uniforme en todas las vistas.
+ * React puro, misma línea gráfica.
+ * Se agregan las URLs de descarga DICOM por estudio y se mantienen estilos.
  */
 
 // ==============================
-// Configuración demo
+// Configuración demo (OHIF + PDF + DICOM ZIP)
 // ==============================
-const DEMO_STUDY_ID = "d7f1d140-a8915e21-18c599e6-2e9a9bed-dbc01840";
-const OSIMIS_VIEWER_BASE = "http://168.243.238.18:8043/osimis-viewer/app/index.html";
-const ORTHANC_API_BASE = "http://168.243.238.18:8042/orthanc";
+const OHIF_COL_URL =
+  "http://168.243.238.18:5172/ohif/viewer?StudyInstanceUIDs=1.2.840.113845.11.1000000002170592405.20230717110051.1083500";
+const OHIF_TOB_URL =
+  "http://168.243.238.18:5172/ohif/viewer?StudyInstanceUIDs=1.2.840.113845.11.1000000002170592405.20240528131335.1103415";
 
-const osimisUrlFor = (studyId) => OSIMIS_VIEWER_BASE + "?study=" + studyId;
-const dicomZipUrlFor = (studyId) => ORTHANC_API_BASE + "/studies/" + studyId + "/archive";
+// ZIPs (corregidos según el filename real)
+const ZIP_TOB =
+  "http://168.243.238.18:5172/studies/2c7360f5-e07fb5d4-5e861576-3e2ab070-11bdf345/archive?filename=00253107-3-ALDANA%20RIVAS%5ELUIS%20BENJAMIN-20240528-Rx%20TOBILLO%20DERECHO.zip";
+const ZIP_COL =
+  "http://168.243.238.18:5172/studies/d7f1d140-a8915e21-18c599e6-2e9a9bed-dbc01840/archive?filename=00253107-3-ALDANA%20RIVAS%5ELUIS%20BENJAMIN-20230717-Rx%20COLUMNA%20LUMBOSACRA.zip";
 
-//const DEMO_REPORT_PDF = "/reporteDemoBenjamin.pdf";
-const DEMO_REPORT_PDF = new URL("./assets/reporteDemoBenjamin.pdf", import.meta.url).href;
+// PDF en src/assets/reportDemo.pdf
+const REPORT_URL = new URL("./assets/reportDemo.pdf", import.meta.url).href;
 
+// ==============================
+// Datos mock mínimos
+// ==============================
 const mockPatient = {
-  id: "BENJAMIN-DEMO",
-  name: "Paciente DEMO (Benjamin)",
+  id: "DEMO",
+  name: "Paciente DEMO",
   dob: "1990-01-01",
   age: 34,
   sex: "Masculino",
 };
 
-const benjaminStudy = {
-  id: DEMO_STUDY_ID,
-  modality: "CR",
-  title: "Columna Lumbosacra",
-  date: "2025-09-03",
-  description: "Estudio CR Columna Lumbosacra (demo Benjamin).",
-  radiologist: "Medico Radiologo",
-  preview: osimisUrlFor(DEMO_STUDY_ID),
-  dicomZip: dicomZipUrlFor(DEMO_STUDY_ID),
-  reportPdf: DEMO_REPORT_PDF,
-};
-
 const mockStudies = [
-  { ...benjaminStudy, id: DEMO_STUDY_ID + "-1" },
-  { ...benjaminStudy, id: DEMO_STUDY_ID + "-2" },
-  { ...benjaminStudy, id: DEMO_STUDY_ID + "-3" },
+  {
+    id: "study-columna",
+    modality: "CR",
+    title: "Columna",
+    date: "2025-09-03",
+    description: "Estudio de columna para demostración.",
+    radiologist: "Médico Radiólogo",
+    preview: OHIF_COL_URL,   // OHIF
+    dicomZip: ZIP_COL,       // ZIP correcto (Columna)
+    reportPdf: REPORT_URL,   // PDF demo
+  },
+  {
+    id: "study-tobillo-derecho",
+    modality: "CR",
+    title: "Tobillo derecho",
+    date: "2025-09-04",
+    description: "Estudio de tobillo derecho para demostración.",
+    radiologist: "Médico Radiólogo",
+    preview: OHIF_TOB_URL,   // OHIF
+    dicomZip: ZIP_TOB,       // ZIP correcto (Tobillo)
+    reportPdf: REPORT_URL,   // PDF demo
+  },
 ];
 
 export default function PortalResultadosReactSolo() {
@@ -106,7 +120,7 @@ export default function PortalResultadosReactSolo() {
         <div className="pr-container">
           <div className="pr-card pr-header">
             <h1 className="pr-title">Demo Portal de Pacientes</h1>
-            <p className="pr-sub">Resultados de estudios • Visor Osimis/Orthanc</p>
+            <p className="pr-sub">Resultados de estudios • Visor OHIF</p>
           </div>
 
           <div className="pr-card" style={{ marginTop: '1rem' }}>
@@ -123,7 +137,11 @@ export default function PortalResultadosReactSolo() {
                   <div className="pr-grid">
                     <div className="pr-list">
                       {mockStudies.map((s) => (
-                        <div key={s.id} className={'pr-item' + (selectedStudyId === s.id ? ' active' : '')} onClick={() => { setSelectedStudyId(s.id); }}>
+                        <div
+                          key={s.id}
+                          className={'pr-item' + (selectedStudyId === s.id ? ' active' : '')}
+                          onClick={() => { setSelectedStudyId(s.id); }}
+                        >
                           <div className="pr-row">
                             <div>
                               <div className="pr-badge">{s.modality}</div>
@@ -144,8 +162,12 @@ export default function PortalResultadosReactSolo() {
                           <div className="pr-title2" style={{ fontSize: '1.25rem' }}>{selectedStudy.title}</div>
                         </div>
                         <div className="pr-actions">
-                          <a className="pr-btn pr-btn--primary" href={selectedStudy.preview} target="_blank" rel="noreferrer">Abrir visor (Osimis)</a>
-                          <a className="pr-btn pr-btn--primary" href={selectedStudy.dicomZip} target="_blank" rel="noreferrer">Descargar DICOM</a>
+                          <a className="pr-btn pr-btn--primary" href={selectedStudy.preview} target="_blank" rel="noreferrer">
+                            Abrir visor (OHIF)
+                          </a>
+                          <a className="pr-btn pr-btn--primary" href={selectedStudy.dicomZip} target="_blank" rel="noreferrer">
+                            Descargar DICOM
+                          </a>
                           <button className="pr-btn" onClick={() => setActiveTab('imagenes')}>Ver imágenes</button>
                           <button className="pr-btn" onClick={() => setActiveTab('reporte')}>Ver reporte</button>
                         </div>
@@ -165,93 +187,73 @@ export default function PortalResultadosReactSolo() {
               )}
 
               {/* IMÁGENES */}
-{activeTab === 'imagenes' && (
-  <div style={{ display: 'flex', justifyContent: 'center' }}>
-    <div style={{ width: '100%', maxWidth: 1000 }}>
-      {/* Caja del visor sin padding interno */}
-      <div style={{
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
-        overflow: 'hidden',
-        background: '#FFFFFF'
-      }}>
-        {/* Barra superior */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          padding: '12px 16px',
-          borderBottom: '1px solid #E5E7EB'
-        }}>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>Visor embebido</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href={selectedStudy.preview} target="_blank" rel="noreferrer"
-               style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
-              Abrir en pestaña nueva
-            </a>
-            <a href={selectedStudy.dicomZip} target="_blank" rel="noreferrer"
-               style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
-              Descargar DICOM
-            </a>
-          </div>
-        </div>
+              {activeTab === 'imagenes' && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', maxWidth: 1000 }}>
+                    {/* Caja del visor sin padding interno */}
+                    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
+                      {/* Barra superior */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
+                        <div style={{ fontWeight: 700, fontSize: 18 }}>Visor embebido</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <a
+                            href={selectedStudy.preview}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                          >
+                            Abrir en pestaña nueva
+                          </a>
+                          <a
+                            href={selectedStudy.dicomZip}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                          >
+                            Descargar DICOM
+                          </a>
+                        </div>
+                      </div>
 
-        {/* IFRAME A TODO ANCHO/ALTO */}
-        <iframe
-          title="Visor Osimis"
-          src={selectedStudy.preview}
-          style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
-          allowFullScreen
-        />
-      </div>
-    </div>
-  </div>
-)}
-
-
-
+                      {/* IFRAME A TODO ANCHO/ALTO */}
+                      <iframe
+                        title="Visor OHIF"
+                        src={selectedStudy.preview}
+                        style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* REPORTE */}
-{activeTab === 'reporte' && (
-  <div style={{ display: 'flex', justifyContent: 'center' }}>
-    <div style={{ width: '100%', maxWidth: 1000 }}>
-      <div style={{
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
-        overflow: 'hidden',
-        background: '#FFFFFF'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          padding: '12px 16px',
-          borderBottom: '1px solid #E5E7EB'
-        }}>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>Reporte PDF</div>
-          <a href={selectedStudy.reportPdf} target="_blank" rel="noreferrer"
-             style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
-            Descargar PDF
-          </a>
-        </div>
+              {activeTab === 'reporte' && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', maxWidth: 1000 }}>
+                    <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
+                        <div style={{ fontWeight: 700, fontSize: 18 }}>Reporte PDF</div>
+                        <a
+                          href={selectedStudy.reportPdf}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ padding: '8px 12px', borderRadius: 8, background: '#0A66FF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}
+                        >
+                          Descargar PDF
+                        </a>
+                      </div>
 
-        {/* PDF A TODO ANCHO/ALTO */}
-        <embed
-          src={selectedStudy.reportPdf + '#view=FitH'}
-          type="application/pdf"
-          style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
-        />
-      </div>
-    </div>
-  </div>
-)}
-
-
-
-
-
+                      {/* PDF A TODO ANCHO/ALTO */}
+                      <embed
+                        src={selectedStudy.reportPdf + '#view=FitH'}
+                        type="application/pdf"
+                        style={{ display: 'block', width: '100%', height: '80vh', border: 0 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
